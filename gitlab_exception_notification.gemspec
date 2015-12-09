@@ -9,9 +9,9 @@ Gem::Specification.new do |s|
   s.version     = GitlabExceptionNotification::VERSION
   s.authors     = ["Andre Aubin"]
   s.email       = ["andre.aubin@lambdaweb.fr"]
-  s.homepage    = "TODO"
-  s.summary     = "TODO: Summary of GitlabExceptionNotification."
-  s.description = "TODO: Description of GitlabExceptionNotification."
+  s.homepage    = "https://github.com/lambda2/gitlab_exception_notification"
+  s.summary     = "A Gitlab plugin for the exception_notification gem."
+  s.description = "Automatically create, open and updates Gitlab issues on rails exceptions."
   s.license     = "MIT"
 
   s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.rdoc"]
