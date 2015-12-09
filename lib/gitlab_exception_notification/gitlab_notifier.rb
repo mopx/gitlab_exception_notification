@@ -1,5 +1,6 @@
 
 require "gitlab"
+require 'digest'
 
 REJECT_HEADERS = /HTTP_COOKIE|(rack.*)|(action_dispatch.*)/
 SLINE = "
@@ -17,10 +18,21 @@ module ExceptionNotifier
       @issues = get_all_issues
     end
 
+    def exception_digest exception
+      p "<><><><> [#{exception.to_s}][#{exception.backtrace.first.to_s}]"
+      "EXC" + Digest::SHA256.hexdigest(exception.to_s + exception.backtrace.first.split(":in").first.to_s)
+    end
+
+    def is_same_exception? issue, exception
+      return false unless issue and issue.description
+      p "[#{issue.description.split(SLINE).last.strip}] <=> [#{@digest}] : [#{issue.description.split(SLINE).last.strip == @digest}]" if issue.description.split(SLINE).last.strip.first == "E"
+      issue.description.split(SLINE).last.strip == @digest
+    end
+
     def issue_exists?(exception)
       @issues = get_all_issues
       rest = @issues.select do |i|
-        i.title == issue_title(exception) and i.description and i.description[exception.backtrace.first]
+        is_same_exception?(i, exception)
       end
       (rest.count > 0 ? rest.first.id : false)
     end
@@ -37,13 +49,24 @@ module ExceptionNotifier
       return @issues.flatten
     end
 
+    def increment_title issue
+      count = ((issue.title =~ /^\([0-9]+\).*/) == 0 ? issue.title.gsub(/^\(([0-9]*)\)(.*)/,'\1').to_i + 1 : 1)
+      p "count == #{count}"
+      new_title = ((issue.title =~ /^\([0-9]+\).*/) == 0 ? issue.title.gsub(/^\(([0-9]*)\)(.*)/, '(' + count.to_s + ')\2') : "(#{count.to_s}) #{issue.title}")
+      p "new title: #{(issue.title =~ /^\([0-9]+\).*/).to_s} (#{(issue.title =~ /^([0-9]*).*/) == 0})"
+      return new_title
+    end
+
     def update_issue(id, exception)
       issue = @client.issue(@project_id, id)
       last = issue.updated_at.to_date
-      if last < 1.hour.ago        
+      if last < 1.hour.ago
         begin
+          p "Adding counter to issue #{id}"
           @client.edit_issue(@project_id, id, {state_event: "reopen"})
-          iss = @client.edit_issue(@project_id, id, {title: "#{issue.title}"})
+          p "Editing issue with title: #{increment_title(issue)}"
+          iss = @client.edit_issue(@project_id, id, {title: increment_title(issue)})
+          p "done editing"
         rescue Exception => e
           p "An error occured: #{e.inspect}"
         end
@@ -103,6 +126,8 @@ module ExceptionNotifier
         description << "#### #{k.to_s.humanize}: "
         description << v.to_s
       end
+      description << @digest
+      p "Digest: #{description.last}"
       description.join("\n\n")
     end
 
@@ -123,6 +148,7 @@ module ExceptionNotifier
       @sections   = @options[:sections]
       @data       = (env['exception_notifier.exception_data'] || {}).merge(options[:data] || {})
       @sections   = @sections + %w(data) unless @data.empty?
+      @digest     = exception_digest(exception)
 
       if issue_id = issue_exists?(exception)
         update_issue(issue_id, exception)
