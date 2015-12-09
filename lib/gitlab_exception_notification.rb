@@ -1,0 +1,2 @@
+module GitlabExceptionNotification
+end
