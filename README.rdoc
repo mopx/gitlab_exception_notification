@@ -1,3 +1,0 @@
-= Gitlab Exception Notification
-
-Automatically create, open and updates Gitlab issues on rails exceptions.
