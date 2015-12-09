@@ -1,25 +1,3 @@
-# https://github.com/smartinez87/exception_notification/blob/master/lib/exception_notifier/email_notifier.rb
-
-# module ExceptionNotifier
-#   class EmailNotifier < ExceptionNotifier::EmailNotifier.ancestors.second
-#     module Mailer
-#       class << self
-#         alias_method :old_extended, :extended
-#       end
-
-#       def self.extended(base)
-#         old_extended(base)
-
-#         base.class_eval do
-#           def clean_backtrace(exception)
-#             exception.backtrace
-#           end
-#         end
-#       end
-
-#     end
-#   end
-# end
 
 require "gitlab"
 
@@ -33,26 +11,21 @@ PER_PAGE = 40
 module ExceptionNotifier
   class GitlabNotifier
     def initialize(options)
-      p "notification with options"
+      p "Booting issue notifications"
       @client = Gitlab.client(endpoint: 'http://gitlab.42.fr/api/v3', private_token: options[:private_token])
       @project_id = @client.project_search(options[:project_name]).first.id
       @issues = get_all_issues
-      # print options.to_yaml
     end
 
     def issue_exists?(exception)
-      p "does issue exists ?"
       @issues = get_all_issues
-      p "Having currently #{@issues.length} issues..."
       rest = @issues.select do |i|
-        p "- Issue: #{i.title} ( == #{issue_title(exception)} ? -> #{i.title == issue_title(exception)}) && #{i.description && i.description[exception.backtrace.first]}"
         i.title == issue_title(exception) and i.description and i.description[exception.backtrace.first]
       end
       (rest.count > 0 ? rest.first.id : false)
     end
 
     def get_all_issues
-      # return @issues unless @issues.nil?
       page = 1
       i = @client.issues(@project_id, per_page: PER_PAGE, page: page, order_by: :updated_at)
       @issues = i
@@ -67,19 +40,13 @@ module ExceptionNotifier
     def update_issue(id, exception)
       issue = @client.issue(@project_id, id)
       last = issue.updated_at.to_date
-      if last < 1.hour.ago
-        p "Recent issue !"
-        # new_description = issue.description.gsub(/Happened ([0-9]*) times/, "Happened #{$1.to_i + 1} times")
-        # p "Ready to update #{issue.id} [#{@project_id}, #{id}, description: #{new_description.length}]"
-        
+      if last < 1.hour.ago        
         begin
           @client.edit_issue(@project_id, id, {state_event: "reopen"})
           iss = @client.edit_issue(@project_id, id, {title: "#{issue.title}"})
         rescue Exception => e
-          p "ERROOOOOOOOOR"
-          p e.inspect
+          p "An error occured: #{e.inspect}"
         end
-        p "Udated: #{iss.title}"
       else
         body = ":fire: This issue occured again #{Time.current}.
         \n#### Summary:\n
@@ -89,9 +56,10 @@ module ExceptionNotifier
         @client.create_issue_note @project_id, id, body
       end
     end
+      
 
+    # The issue title
     def issue_title exception
-      # The issue title
       title = []
       title << "#{@kontroller.controller_name}##{@kontroller.action_name}" if @kontroller
       title << "(#{exception.class})"
@@ -113,20 +81,14 @@ module ExceptionNotifier
       }
     end
 
-    def md_hash hash, pre = ""
-      hash.map { |k, v|  "#{pre}- **#{k}**: `#{v}`"}.join(SLINE)
-    end
-
-    def create_issue(exception)
-      file = exception.backtrace.first
+    def issue_description exception
 
       # Get a 'mardowned' backtrace
       m_backtrace = "```#{SLINE} #{exception.backtrace.join(SLINE)}#{SLINE}```"
 
-      # The issue title
-      title = issue_title(exception)
+      # Get the concerned file
+      file = exception.backtrace.first
 
-      # The issue content
       description = ["#{exception.message} #{@kontroller ? 'in controller ' + @kontroller.controller_name + '#' + @kontroller.action_name : ''}"]
       description << "File: #{file}"
       {
@@ -141,13 +103,18 @@ module ExceptionNotifier
         description << "#### #{k.to_s.humanize}: "
         description << v.to_s
       end
+      description.join("\n\n")
+    end
 
-      p "creating issue for project [#{@project_id}] with title: #{title}"
-      @client.create_issue(@project_id, title, {description: description.join("\n\n")})
+    def md_hash hash, pre = ""
+      hash.map { |k, v|  "#{pre}- **#{k}**: `#{v}`"}.join(SLINE)
+    end
+
+    def create_issue(exception)
+      @client.create_issue(@project_id, issue_title(exception), {description: issue_description(exception)})
     end
 
     def exception_notification(env, exception, options={})
-      p "exception"
       @env        = env
       @exception  = exception
       @options    = options.reverse_merge(env['exception_notifier.options'] || {})
@@ -158,27 +125,15 @@ module ExceptionNotifier
       @sections   = @sections + %w(data) unless @data.empty?
 
       if issue_id = issue_exists?(exception)
-        p "Updating issue #{issue_id}..."
         update_issue(issue_id, exception)
       else
-        p "Creating issue..."
         create_issue(exception)
       end
-
-      p "end"
-            
     end
 
     def call(exception, options={})
-      
-      p "Exception called:"
       env = options[:env] || {}
-      begin
-        exception_notification(env, exception, options)
-      rescue Exception => e
-        p "YAAAAAAGL"
-        p e.inspect
-      end
+      exception_notification(env, exception, options)
     end
   end
 end
