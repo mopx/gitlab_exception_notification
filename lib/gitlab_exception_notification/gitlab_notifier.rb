@@ -3,6 +3,7 @@
 module ExceptionNotifier
   class GitlabNotifier
     def initialize(options)
+      puts "On init, options => #{options.inspect}"
       @options = options
     end
 
@@ -17,6 +18,7 @@ module ExceptionNotifier
     end
 
     def call(exception, options={})
+      puts "On call, exception => #{exception.inspect}, options => #{options.inspect}"
       env = options[:env] || {}
       exception_notification(env, exception, @options.merge(options))
     end

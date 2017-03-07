@@ -1,7 +1,7 @@
 module GitlabExceptionNotification
 
   class Issue
-    
+
     def initialize(env, exception, options={})
       @env        = env
       @exception  = exception
@@ -10,7 +10,7 @@ module GitlabExceptionNotification
       @request    = ActionDispatch::Request.new(env)
       @data       = (env['exception_notifier.exception_data'] || {}).merge(options[:data] || {})
       @digest     = digest
-      @client = Gitlab.client(endpoint: 'http://gitlab.42.fr/api/v3', private_token: options[:private_token])
+      @client = Gitlab.client(endpoint: options[:gitlab_url], private_token: options[:private_token])
       @project_id = @client.project_search(options[:project_name]).first.id
       @issues     = self.all
     end
@@ -132,7 +132,7 @@ module GitlabExceptionNotification
     def md_hash hash, pre = ""
       hash.map { |k, v|  "#{pre}- **#{k}**: `#{v}`"}.join(SLINE)
     end
-    
+
     def digest
       "EXC" + Digest::SHA256.hexdigest(@exception.to_s + @exception.backtrace.first.split(":in").first.to_s)
     end

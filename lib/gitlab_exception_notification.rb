@@ -1,7 +1,7 @@
-module GitlabExceptionNotification
+require "gitlab"
+require "digest"
 
-  require "gitlab"
-  require 'digest'
+module GitlabExceptionNotification
 
   REJECT_HEADERS = /HTTP_COOKIE|(rack.*)|(action_dispatch.*)/
   SLINE = "

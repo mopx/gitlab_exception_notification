@@ -22,6 +22,7 @@ Add the `gitlab` notifier in the [ExceptionNotification](https://github.com/smar
 config.middleware.use ExceptionNotification::Rack,
   :gitlab => {
     private_token: "YOUR_PRIVATE_GITLAB_TOKEN",
+    gitlab_url: "YOUR_PRIVATE_GITLAB_ENDPOINT",
     project_name: "YOUR_GITLAB_PROJECT_NAME"
   }
 ```
