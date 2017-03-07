@@ -41,7 +41,7 @@ module GitlabExceptionNotification
 
     def is_same_exception? issue
       return false if issue.nil? or issue.description.nil?
-      issue.description.split(SLINE).last.strip == @digest
+      issue.description.split(SLINE).last && issue.description.split(SLINE).last.strip == @digest
     end
 
     def exists?
@@ -134,6 +134,9 @@ module GitlabExceptionNotification
     end
 
     def digest
+      puts "Creating digest with: "
+      puts "- #{@exception.to_s}"
+      puts "- #{@exception.backtrace.first.split(":in").first.to_s}"
       "EXC" + Digest::SHA256.hexdigest(@exception.to_s + @exception.backtrace.first.split(":in").first.to_s)
     end
 
