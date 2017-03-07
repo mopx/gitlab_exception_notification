@@ -4,8 +4,7 @@ require "digest"
 module GitlabExceptionNotification
 
   REJECT_HEADERS = /HTTP_COOKIE|(rack.*)|(action_dispatch.*)/
-  SLINE = "
-  "
+  SLINE = "\n"
   STAB = SLINE + "    "
 
   PER_PAGE = 40
