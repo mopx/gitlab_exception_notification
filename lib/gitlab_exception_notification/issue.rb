@@ -11,7 +11,7 @@ module GitlabExceptionNotification
       @data       = (env['exception_notifier.exception_data'] || {}).merge(options[:data] || {})
       @digest     = digest
       @client = Gitlab.client(endpoint: options[:gitlab_url], private_token: options[:private_token])
-      @project_id = @client.project_search(options[:project_name]).first.id
+      @project_id = @client.project(options[:project_id]).id
       @issues     = self.all
     end
 
