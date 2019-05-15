@@ -50,7 +50,7 @@ module GitlabExceptionNotification
       rest = @issues.select do |i|
         is_same_exception?(i)
       end
-      (rest.count > 0 ? rest.first.id : false)
+      (rest.count > 0 ? rest.first.iid : false)
     end
 
     def all
